@@ -130,6 +130,38 @@ void populate_matrix(MD_Parola &matrix, const String &out)
     matrix.flush();
 }
 
+#ifdef HA_HOUR_SENSOR
+void display_hour(MD_MAX72XX *const matrix_hw)
+{
+    const auto hour_ret = ha_get_state_from(HA_HOUR_SENSOR);
+    if (!hour_ret) {
+        Serial1.print("HA issue: get hour.");
+        return;
+    }
+    long hour = (*hour_ret).toInt();
+    long index = 0;
+    if (hour > 12) {
+        for (long p = 0; p < 12; ++p) {
+            matrix_hw->setPoint(7, p, true);
+        }
+        matrix_hw->setPoint(7, 12, false);
+        matrix_hw->setPoint(7, 13, false);
+        hour = hour - 12;
+        index = 14;
+    }
+
+    if (index == 0) {
+        matrix_hw->setPoint(7, 12, true);
+        matrix_hw->setPoint(7, 13, true);
+    }
+
+    for (long p = 0; p < hour; ++p) {
+        matrix_hw->setPoint(7, p + index, true);
+    }
+    matrix_hw->update();
+}
+#endif
+
 } // end of namespace
 
 void setup()
@@ -147,6 +179,7 @@ void setup()
     const bool handle_ota = !rtc_wifi.is_restored();
     String out;
     out.reserve(16);
+
 
     Serial.begin(115200);
 
@@ -208,10 +241,15 @@ void setup()
     Serial.println("HA Temps: " + out);
     Serial.flush();
 
+
     if (!ha_error) {
         Serial.println("Update temp on matrix.");
         populate_matrix(matrix, out);
     }
+#ifdef HA_HOUR_SENSOR
+    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
+    display_hour(matrix_hw);
+#endif
 
     // sleep for 5 minutes
     CoolESP::Utils::sleep_me(300000000UL);
