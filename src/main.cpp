@@ -64,7 +64,7 @@ std::optional<String> ha_get_sensor(const String &sensor)
     return payload;
 }
 
-std::optional<String> ha_get_temp_from(const String &sensor)
+std::optional<String> ha_get_state_from(const String &sensor)
 {
     const auto payload = ha_get_sensor(sensor);
     if (!payload) {
@@ -189,7 +189,7 @@ void setup()
 
     for (const auto &sensor : sensors)
     {
-        const auto temp = ha_get_temp_from(sensor);
+        const auto temp = ha_get_state_from(sensor);
         if (!temp || *temp == "unknown") {
             Serial.println(F("Unable to get temperature from HA."));
             matrix.displayClear();
