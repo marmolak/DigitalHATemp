@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <assert.h>
 #include <HardwareSerial.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -123,12 +124,14 @@ void setup_OTA()
     ArduinoOTA.setPassword((const char *) Config::Wifi::ota_password);
 }
 
+
 void populate_matrix(MD_Parola &matrix, const String &out)
 {
     matrix.displayClear();
     matrix.print(out);
     matrix.flush();
 }
+
 
 #ifdef HA_HOUR_SENSOR
 void display_hour(MD_MAX72XX *const matrix_hw)
@@ -138,7 +141,6 @@ void display_hour(MD_MAX72XX *const matrix_hw)
         Serial1.print("HA issue: get hour.");
         return;
     }
-
 
     long hour = (*hour_ret).toInt();
     long led_index = 0;
@@ -163,6 +165,46 @@ void display_hour(MD_MAX72XX *const matrix_hw)
 }
 #endif
 
+
+void display_sensor_values(MD_Parola &matrix)
+{
+    bool ha_error = false;
+    String out;
+    out.reserve(16);
+
+    for (const auto &sensor : sensors)
+    {
+        const auto temp = ha_get_state_from(sensor);
+        if (!temp || *temp == "unknown") {
+            Serial.println(F("Unable to get temperature from HA."));
+            matrix.displayClear();
+            matrix.print("HA issue");
+            ha_error = true;
+            break;
+        }
+
+        String sensor_value = *temp;
+        if (sensor_value.indexOf('.') == -1) {
+            sensor_value += ".0";
+        }
+        out += sensor_value + " ";
+    }
+    out.trim();
+
+    Serial.println("HA Temps: " + out);
+    Serial.flush();
+
+    if (!ha_error) {
+        Serial.println("Update temp on matrix.");
+        populate_matrix(matrix, out);
+    }
+
+#ifdef HA_HOUR_SENSOR
+    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
+    display_hour(matrix_hw);
+#endif
+}
+
 } // end of namespace
 
 void setup()
@@ -176,18 +218,15 @@ void setup()
     MD_Parola matrix { MD_Parola(HARDWARE_TYPE, SPI1, CS_PIN, MAX_DEVICES) };
 
     AsyncDelay delay_20s;
-    bool ha_error = false;
     const bool handle_ota = !rtc_wifi.is_restored();
-    String out;
-    out.reserve(16);
-
 
     Serial.begin(115200);
 
+    // Disable blue crazy led
     pinMode(ONBOARD_LED, OUTPUT);
     digitalWrite(ONBOARD_LED, HIGH);
 
-    // Don't mess with matrix
+    // Don't mess with matrix after deep sleep
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CS_PIN, HIGH);
     SPI1.begin();
@@ -221,40 +260,14 @@ void setup()
         ArduinoOTA.end();
     }
 
-    for (const auto &sensor : sensors)
-    {
-        const auto temp = ha_get_state_from(sensor);
-        if (!temp || *temp == "unknown") {
-            Serial.println(F("Unable to get temperature from HA."));
-            matrix.displayClear();
-            matrix.print("HA issue");
-            ha_error = true;
-            break;
-        }
-        String sensor_value = *temp;
-        if (sensor_value.indexOf('.') == -1) {
-            sensor_value += ".0";
-        }
-        out += sensor_value + " ";
-    }
-    out.trim();
-
-    Serial.println("HA Temps: " + out);
-    Serial.flush();
-
-
-    if (!ha_error) {
-        Serial.println("Update temp on matrix.");
-        populate_matrix(matrix, out);
-    }
-#ifdef HA_HOUR_SENSOR
-    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
-    display_hour(matrix_hw);
-#endif
+    display_sensor_values(matrix);
 
     // sleep for 5 minutes
     CoolESP::Utils::sleep_me(300000000UL);
 }
 
 void loop() {
+    // We should never reach this code so make it die.
+    assert(false);
+    abort();
 }
