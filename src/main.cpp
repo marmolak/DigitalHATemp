@@ -143,20 +143,18 @@ void display_hour(MD_MAX72XX *const matrix_hw)
     }
 
     long hour = (*hour_ret).toInt();
-    long led_index = 0;
+    const long led_index = (hour > 12) ? 14 : 0;
 
     // Set AM/PM mark
     matrix_hw->setPoint(7, 12, hour <= 12);
     matrix_hw->setPoint(7, 13, hour <= 12);
 
     if (hour > 12) {
-        for (long p = 0; p < 12; ++p) {
-            matrix_hw->setPoint(7, p, true);
-        }
+        // Set all 12 LEDs
+        matrix_hw->setRow(0, 0, 7, 0xFF);
+        matrix_hw->setRow(1, 1, 7, 0b00001111);
         hour = hour - 12;
-        led_index = 14;
     }
-
 
     for (long p = 0; p < hour; ++p) {
         matrix_hw->setPoint(7, p + led_index, true);
