@@ -138,25 +138,26 @@ void display_hour(MD_MAX72XX *const matrix_hw)
         Serial1.print("HA issue: get hour.");
         return;
     }
+
+
     long hour = (*hour_ret).toInt();
-    long index = 0;
+    long led_index = 0;
+
+    // Set AM/PM mark
+    matrix_hw->setPoint(7, 12, hour <= 12);
+    matrix_hw->setPoint(7, 13, hour <= 12);
+
     if (hour > 12) {
         for (long p = 0; p < 12; ++p) {
             matrix_hw->setPoint(7, p, true);
         }
-        matrix_hw->setPoint(7, 12, false);
-        matrix_hw->setPoint(7, 13, false);
         hour = hour - 12;
-        index = 14;
+        led_index = 14;
     }
 
-    if (index == 0) {
-        matrix_hw->setPoint(7, 12, true);
-        matrix_hw->setPoint(7, 13, true);
-    }
 
     for (long p = 0; p < hour; ++p) {
-        matrix_hw->setPoint(7, p + index, true);
+        matrix_hw->setPoint(7, p + led_index, true);
     }
     matrix_hw->update();
 }
