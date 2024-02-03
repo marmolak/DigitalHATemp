@@ -149,6 +149,10 @@ void display_hour(MD_MAX72XX *const matrix_hw)
     matrix_hw->setPoint(7, 12, hour <= 12);
     matrix_hw->setPoint(7, 13, hour <= 12);
 
+    // Set ending
+    matrix_hw->setPoint(7, 26, true);
+    matrix_hw->setPoint(7, 27, true);
+
     if (hour > 12) {
         // Set all 12 LEDs
         matrix_hw->setRow(0, 0, 7, 0xFF);
