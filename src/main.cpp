@@ -231,6 +231,7 @@ void setup()
     // Don't mess with matrix after deep sleep
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CS_PIN, HIGH);
+    SPI1.setClockDivider(SPI_CLOCK_DIV16);
     SPI1.begin();
 
     if (!matrix.begin()) {
