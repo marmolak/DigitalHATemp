@@ -138,7 +138,7 @@ void display_hour(MD_MAX72XX *const matrix_hw)
 {
     const auto hour_ret = ha_get_state_from(HA_HOUR_SENSOR);
     if (!hour_ret) {
-        Serial1.print("HA issue: get hour.");
+        Serial1.println("HA issue: get hour.");
         return;
     }
 
