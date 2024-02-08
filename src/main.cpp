@@ -152,6 +152,7 @@ void display_hour(MD_MAX72XX *const matrix_hw)
 
     const long led_index = (hour > 12) ? 14 : 0;
 
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
     // Set AM/PM mark
     matrix_hw->setPoint(7, 12, hour <= 12);
     matrix_hw->setPoint(7, 13, hour <= 12);
@@ -170,6 +171,8 @@ void display_hour(MD_MAX72XX *const matrix_hw)
     for (long p = 0; p < hour; ++p) {
         matrix_hw->setPoint(7, p + led_index, true);
     }
+
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
     matrix_hw->update();
 }
 #endif
@@ -238,7 +241,8 @@ void setup()
     // Don't mess with matrix after deep sleep
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CS_PIN, HIGH);
-    SPI1.setClockDivider(SPI_CLOCK_DIV16);
+
+    SPI1.setClockDivider(SPI_CLOCK_DIV128);
     SPI1.begin();
 
     if (!matrix.begin()) {
