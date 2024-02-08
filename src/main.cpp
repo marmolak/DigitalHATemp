@@ -143,6 +143,13 @@ void display_hour(MD_MAX72XX *const matrix_hw)
     }
 
     long hour = (*hour_ret).toInt();
+
+    // Check input
+    if (!(hour >= 0 && hour <= 23)) {
+        Serial.println("HA value Hour: parse error");
+        return;
+    }
+
     const long led_index = (hour > 12) ? 14 : 0;
 
     // Set AM/PM mark
