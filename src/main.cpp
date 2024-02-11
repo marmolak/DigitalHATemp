@@ -129,9 +129,7 @@ void populate_matrix(MD_Parola &matrix, const String &out)
 {
     matrix.displayClear();
     matrix.print(out);
-    matrix.flush();
 }
-
 
 #ifdef HA_HOUR_SENSOR
 void display_hour(MD_MAX72XX *const matrix_hw)
