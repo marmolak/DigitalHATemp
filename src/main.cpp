@@ -150,7 +150,6 @@ void display_hour(MD_MAX72XX *const matrix_hw)
 
     const long led_index = (hour > 12) ? 14 : 0;
 
-    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
     // Set AM/PM mark
     matrix_hw->setPoint(7, 12, hour <= 12);
     matrix_hw->setPoint(7, 13, hour <= 12);
@@ -170,17 +169,18 @@ void display_hour(MD_MAX72XX *const matrix_hw)
         matrix_hw->setPoint(7, p + led_index, true);
     }
 
-    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
-    matrix_hw->update();
 }
 #endif
 
 
 void display_sensor_values(MD_Parola &matrix)
 {
+    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
     bool ha_error = false;
     String out;
     out.reserve(16);
+
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
 
     for (const auto &sensor : sensors)
     {
@@ -210,9 +210,11 @@ void display_sensor_values(MD_Parola &matrix)
     }
 
 #ifdef HA_HOUR_SENSOR
-    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
     display_hour(matrix_hw);
 #endif
+
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
+    matrix_hw->update();
 }
 
 } // end of namespace
