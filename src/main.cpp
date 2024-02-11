@@ -187,8 +187,7 @@ void display_sensor_values(MD_Parola &matrix)
         const auto temp = ha_get_state_from(sensor);
         if (!temp || *temp == "unknown") {
             Serial.println(F("Unable to get temperature from HA."));
-            matrix.displayClear();
-            matrix.print("HA issue");
+            populate_matrix(matrix, "HA issue");
             ha_error = true;
             break;
         }
@@ -259,9 +258,7 @@ void setup()
     if (handle_ota) [[unlikely]]
     {
         Serial.println(F("First start. Handling ota update."));
-        matrix.displayClear();
-        matrix.print("OTA wait");
-
+        populate_matrix(matrix, "OTA wait");
         setup_OTA();
 
         MDNS.begin(Config::Wifi::mdns_hostname);
