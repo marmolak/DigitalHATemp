@@ -241,7 +241,7 @@ void setup()
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CS_PIN, HIGH);
 
-    SPI1.setClockDivider(SPI_CLOCK_DIV64);
+    SPI1.setClockDivider(SPI_CLOCK_DIV128);
     SPI1.begin();
 
     if (!matrix.begin()) {
