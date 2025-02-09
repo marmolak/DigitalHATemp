@@ -253,6 +253,13 @@ void setup()
     matrix.displayClear();
     matrix.setTextAlignment(PA_CENTER);
 
+    const esp_reset_reason_t reason = esp_reset_reason();
+    if (reason != ESP_RST_DEEPSLEEP)
+    {
+        populate_matrix(matrix, "Hello!");
+        delay(1000);
+    }
+
     rtc_wifi.connect(Config::Wifi::ssid, Config::Wifi::password);
 
     if (handle_ota) [[unlikely]]
