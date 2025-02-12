@@ -58,6 +58,7 @@ class RTCWifi final
             }
 
             auto &data = rtc_data.get();
+            data.flip = false;
 
             void *const bssid_stored = reinterpret_cast<void *>(&data.bssid);
             const uint8_t *const bssid_actual = WiFi.BSSID();

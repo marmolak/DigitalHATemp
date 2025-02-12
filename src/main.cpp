@@ -23,6 +23,8 @@
 #include "Common/Arch/ESP/Utils.hpp"
 #include "Common/Arch/ESP/RTCWifi.hpp"
 
+#include "Common/Tools/btc.h"
+
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 
 #define MAX_DEVICES 8
@@ -33,6 +35,7 @@ namespace {
 
 struct alignas(uint32_t) my_rtc_data_t
 {
+    bool flip;
 };
 
 const struct ha_connect_t {
@@ -132,7 +135,7 @@ void populate_matrix(MD_Parola &matrix, const String &out)
 }
 
 #ifdef HA_HOUR_SENSOR
-void display_hour(MD_MAX72XX *const matrix_hw)
+void display_hour(MD_Parola &matrix)
 {
     const auto hour_ret = ha_get_state_from(HA_HOUR_SENSOR);
     if (!hour_ret) {
@@ -149,6 +152,8 @@ void display_hour(MD_MAX72XX *const matrix_hw)
     }
 
     const long led_index = (hour > 12) ? 14 : 0;
+
+    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
 
     // Set AM/PM mark
     matrix_hw->setPoint(7, 12, hour <= 12);
@@ -172,15 +177,23 @@ void display_hour(MD_MAX72XX *const matrix_hw)
 }
 #endif
 
+void display_btc_price(MD_Parola &matrix)
+{
+    const auto btc_price = btc::get_usd_price();
+    if (!btc_price) {
+        populate_matrix(matrix, "BTC error");
+        Serial.println(F("Unable to get BTC price."));
+        return;
+    };
+
+    populate_matrix(matrix, *btc_price);
+}
 
 void display_sensor_values(MD_Parola &matrix)
 {
-    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
     bool ha_error = false;
     String out;
     out.reserve(16);
-
-    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
 
     for (const auto &sensor : sensors)
     {
@@ -207,13 +220,6 @@ void display_sensor_values(MD_Parola &matrix)
         Serial.println("Update temp on matrix.");
         populate_matrix(matrix, out);
     }
-
-#ifdef HA_HOUR_SENSOR
-    display_hour(matrix_hw);
-#endif
-
-    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
-    matrix_hw->update();
 }
 
 } // end of namespace
@@ -278,7 +284,25 @@ void setup()
         ArduinoOTA.end();
     }
 
-    display_sensor_values(matrix);
+    // Prepare matrix
+    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
+
+    auto &data = rtc_wifi.get_rtc_data().get();
+    if (data.flip) {
+        display_btc_price(matrix);
+    } else {
+        display_sensor_values(matrix);
+    }
+    data.flip = !data.flip;
+
+#ifdef HA_HOUR_SENSOR
+    display_hour(matrix);
+#endif
+
+    // update matrix
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
+    matrix_hw->update();
 
     // sleep for 5 minutes
     CoolESP::Utils::sleep_me(300000000UL);
