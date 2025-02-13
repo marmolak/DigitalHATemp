@@ -103,8 +103,7 @@ void setup_OTA()
     {
         LittleFS.begin();
 
-        // Kind of magic. Prevent broken display content after upgrade.
-        CoolESP::Utils::sleep_me(30000UL);
+        ESP.restart();
     });
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
