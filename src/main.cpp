@@ -268,7 +268,7 @@ void setup()
 
     rtc_wifi.connect(Config::Wifi::ssid, Config::Wifi::password);
 
-    if (handle_ota) [[unlikely]]
+    if (handle_ota)
     {
         Serial.println(F("First start. Handling ota update."));
         populate_matrix(matrix, "OTA wait");
