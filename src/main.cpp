@@ -284,6 +284,16 @@ void setup()
         ArduinoOTA.end();
     }
 
+    const auto night_mode = ha_get_state_from(HA_NIGHT_MODE);
+    if (night_mode && *night_mode == "on") {
+        // Sleep for 10 minutes
+        matrix.displayShutdown(true);
+        CoolESP::Utils::sleep_me(600000000UL);
+
+        // No return from previous call but ...
+        return;
+    }
+
     // Prepare matrix
     MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
     matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
