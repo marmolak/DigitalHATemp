@@ -251,6 +251,7 @@ void setup()
 
     if (!matrix.begin()) {
         Serial.println("Matrix failed");
+        return;
     }
 
     matrix.setInvert(false);
