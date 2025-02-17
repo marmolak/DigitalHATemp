@@ -1,10 +1,10 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <ArduinoOTA.h>
 #include <assert.h>
 #include <HardwareSerial.h>
-#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <ArduinoOTA.h>
 #include <LittleFS.h>
 #include "MD_Parola.h"
 #include "MD_MAX72xx.h"
