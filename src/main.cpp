@@ -39,7 +39,7 @@ struct alignas(uint32_t) my_rtc_data_t
 };
 
 const struct ha_connect_t {
-    const String url = F("http://" HA_ADDRESS ":" HA_PORT "/api/states/");
+    const String url = F("https://" HA_ADDRESS ":" HA_PORT "/api/states/");
     // Mix token and magic word
     const String token = F("Bearer " HA_TOKEN);
 } ha_connect;
@@ -53,9 +53,12 @@ const std::array<const String, 2> sensors = {
 
 std::optional<String> ha_get_sensor(const String &sensor)
 {
+    WiFiClientSecure client;
+    client.setInsecure();
+
     HTTPClient http;
 
-    http.begin(ha_connect.url + sensor);
+    http.begin(client, ha_connect.url + sensor);
     http.addHeader(F("Authorization"), ha_connect.token);
     http.addHeader(F("content-type"), F("application/json"));
 

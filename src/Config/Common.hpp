@@ -2,7 +2,7 @@
 
 // Home Assistant config
 #define HA_ADDRESS  ""
-#define HA_PORT     "8123"
+#define HA_PORT     "443"
 
 #define HA_TOKEN    ""
 
