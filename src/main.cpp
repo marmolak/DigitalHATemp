@@ -139,6 +139,14 @@ void populate_matrix(MD_Parola &matrix, const String &out)
 
 // ---------- FETCH: only HTTP requests, the matrix is not touched ----------
 
+// HA reports "unknown" or "unavailable" instead of a real value, for example
+// when a sensor is offline. Such a state must never be shown or parsed
+// (String::toInt() returns 0 for any text, which would pass as midnight).
+bool is_valid_state(const String &state)
+{
+    return state.length() > 0 && state != "unknown" && state != "unavailable";
+}
+
 String fetch_btc_text()
 {
     const auto btc_price = btc::get_usd_price();
@@ -158,7 +166,7 @@ String fetch_sensor_text()
     for (const auto &sensor : sensors)
     {
         const auto temp = ha_get_state_from(sensor);
-        if (!temp || *temp == "unknown") {
+        if (!temp || !is_valid_state(*temp)) {
             Serial.println(F("Unable to get temperature from HA."));
             return "HA issue";
         }
@@ -181,7 +189,7 @@ String fetch_sensor_text()
 std::optional<long> fetch_hour()
 {
     const auto hour_ret = ha_get_state_from(HA_HOUR_SENSOR);
-    if (!hour_ret) {
+    if (!hour_ret || !is_valid_state(*hour_ret)) {
         Serial.println("HA issue: get hour.");
         return std::nullopt;
     }
