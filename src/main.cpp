@@ -51,24 +51,63 @@ const std::array<const String, 2> sensors = {
     F(HA_SENSOR2)
 };
 
-std::optional<String> ha_get_sensor(const String &sensor)
-{
-    WiFiClientSecure client;
-    client.setInsecure();
+constexpr uint16_t ha_http_timeout_ms = 5000;
 
+// All HA requests of one wake-up share a single TLS connection. Opening a
+// new one for every request means a full TLS handshake each time, which
+// keeps the ESP awake (and draining the battery) for no good reason.
+// Both objects have to live as long as the connection does, because the
+// destructor of HTTPClient closes it.
+struct ha_session_t {
+    WiFiClientSecure client;
     HTTPClient http;
 
-    http.begin(client, ha_connect.url + sensor);
-    http.addHeader(F("Authorization"), ha_connect.token);
-    http.addHeader(F("content-type"), F("application/json"));
+    ha_session_t()
+    {
+        client.setInsecure();
+        http.setReuse(true);
+        http.setTimeout(ha_http_timeout_ms);
+    }
+};
 
-    const int response_code = http.GET();
-    if (response_code != 200) {
-        return std::nullopt;
+ha_session_t &ha_session()
+{
+    static ha_session_t session;
+    return session;
+}
+
+std::optional<String> ha_get_sensor(const String &sensor)
+{
+    ha_session_t &session = ha_session();
+    HTTPClient &http = session.http;
+
+    // The server may have closed the kept-alive connection in the meantime.
+    // Such a request fails at the transport level (negative return code),
+    // so retry it once on a fresh connection.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        http.begin(session.client, ha_connect.url + sensor);
+        http.addHeader(F("Authorization"), ha_connect.token);
+        http.addHeader(F("content-type"), F("application/json"));
+
+        const int response_code = http.GET();
+        if (response_code == 200) {
+            String payload = http.getString();
+            http.end();
+            return payload;
+        }
+
+        http.end();
+
+        if (response_code > 0) {
+            // The server answered, just not with what we need.
+            // Retrying would not help.
+            return std::nullopt;
+        }
+
+        session.client.stop();
     }
 
-    String payload = http.getString();
-    return payload;
+    return std::nullopt;
 }
 
 std::optional<String> ha_get_state_from(const String &sensor)
