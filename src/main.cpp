@@ -137,26 +137,71 @@ void populate_matrix(MD_Parola &matrix, const String &out)
     matrix.print(out);
 }
 
+// ---------- FETCH: only HTTP requests, the matrix is not touched ----------
+
+String fetch_btc_text()
+{
+    const auto btc_price = btc::get_usd_price();
+    if (!btc_price) {
+        Serial.println(F("Unable to get BTC price."));
+        return "BTC error";
+    }
+
+    return *btc_price;
+}
+
+String fetch_sensor_text()
+{
+    String out;
+    out.reserve(16);
+
+    for (const auto &sensor : sensors)
+    {
+        const auto temp = ha_get_state_from(sensor);
+        if (!temp || *temp == "unknown") {
+            Serial.println(F("Unable to get temperature from HA."));
+            return "HA issue";
+        }
+
+        String sensor_value = *temp;
+        if (sensor_value.indexOf('.') == -1) {
+            sensor_value += ".0";
+        }
+        out += sensor_value + " ";
+    }
+    out.trim();
+
+    Serial.println("HA Temps: " + out);
+    Serial.flush();
+
+    return out;
+}
+
 #ifdef HA_HOUR_SENSOR
-void display_hour(MD_Parola &matrix)
+std::optional<long> fetch_hour()
 {
     const auto hour_ret = ha_get_state_from(HA_HOUR_SENSOR);
     if (!hour_ret) {
         Serial.println("HA issue: get hour.");
-        return;
+        return std::nullopt;
     }
 
-    long hour = (*hour_ret).toInt();
+    const long hour = (*hour_ret).toInt();
 
     // Check input
     if (!(hour >= 0 && hour <= 23)) {
         Serial.println("HA value Hour: parse error");
-        return;
+        return std::nullopt;
     }
 
-    const long led_index = (hour > 12) ? 14 : 0;
+    return hour;
+}
 
-    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
+// ---------- DRAW: no HTTP requests, only drawing into the matrix buffer ----------
+
+void draw_hour(MD_MAX72XX *const matrix_hw, long hour)
+{
+    const long led_index = (hour > 12) ? 14 : 0;
 
     // Set AM/PM mark
     matrix_hw->setPoint(7, 12, hour <= 12);
@@ -176,54 +221,8 @@ void display_hour(MD_Parola &matrix)
     for (long p = 0; p < hour; ++p) {
         matrix_hw->setPoint(7, p + led_index, true);
     }
-
 }
 #endif
-
-void display_btc_price(MD_Parola &matrix)
-{
-    const auto btc_price = btc::get_usd_price();
-    if (!btc_price) {
-        populate_matrix(matrix, "BTC error");
-        Serial.println(F("Unable to get BTC price."));
-        return;
-    };
-
-    populate_matrix(matrix, *btc_price);
-}
-
-void display_sensor_values(MD_Parola &matrix)
-{
-    bool ha_error = false;
-    String out;
-    out.reserve(16);
-
-    for (const auto &sensor : sensors)
-    {
-        const auto temp = ha_get_state_from(sensor);
-        if (!temp || *temp == "unknown") {
-            Serial.println(F("Unable to get temperature from HA."));
-            populate_matrix(matrix, "HA issue");
-            ha_error = true;
-            break;
-        }
-
-        String sensor_value = *temp;
-        if (sensor_value.indexOf('.') == -1) {
-            sensor_value += ".0";
-        }
-        out += sensor_value + " ";
-    }
-    out.trim();
-
-    Serial.println("HA Temps: " + out);
-    Serial.flush();
-
-    if (!ha_error) {
-        Serial.println("Update temp on matrix.");
-        populate_matrix(matrix, out);
-    }
-}
 
 } // end of namespace
 
@@ -298,20 +297,27 @@ void setup()
         return;
     }
 
-    // Prepare matrix
-    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
-    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
-
+    // Get all data first. The matrix is not touched during HTTP requests.
     auto &data = rtc_wifi.get_rtc_data().get();
-    if (data.flip) {
-        display_btc_price(matrix);
-    } else {
-        display_sensor_values(matrix);
-    }
+    const String text = data.flip ? fetch_btc_text() : fetch_sensor_text();
     data.flip = !data.flip;
 
 #ifdef HA_HOUR_SENSOR
-    display_hour(matrix);
+    const auto hour = fetch_hour();
+#endif
+
+    // Prepare matrix and draw everything at once
+    MD_MAX72XX *const matrix_hw = matrix.getGraphicObject();
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
+    populate_matrix(matrix, text);
+
+    // print() may switch UPDATE back on, so turn it off again
+    matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
+
+#ifdef HA_HOUR_SENSOR
+    if (hour) {
+        draw_hour(matrix_hw, *hour);
+    }
 #endif
 
     // update matrix
