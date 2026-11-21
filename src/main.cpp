@@ -79,15 +79,29 @@ std::optional<String> ha_get_state_from(const String &sensor)
         return std::nullopt;
     }
 
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, *payload);
+    // Only "state" is needed. The filter drops everything else (attributes,
+    // timestamps, ...) while parsing, so a small document is always enough
+    // and a sensor with many attributes can not run out of memory.
+    DynamicJsonDocument filter(32);
+    filter["state"] = true;
+
+    DynamicJsonDocument doc(128);
+    const DeserializationError error =
+        deserializeJson(doc, *payload, DeserializationOption::Filter(filter));
     if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
         return std::nullopt;
     }
 
-    return doc["state"];
+    // A missing "state" must not be turned into the text "null".
+    const char *state = doc["state"];
+    if (!state) {
+        Serial.println(F("No state in HA response."));
+        return std::nullopt;
+    }
+
+    return String(state);
 }
 
 void setup_OTA()
