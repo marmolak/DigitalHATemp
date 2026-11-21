@@ -119,12 +119,13 @@ std::optional<String> ha_get_state_from(const String &sensor)
     }
 
     // Only "state" is needed. The filter drops everything else (attributes,
-    // timestamps, ...) while parsing, so a small document is always enough
-    // and a sensor with many attributes can not run out of memory.
-    DynamicJsonDocument filter(32);
+    // timestamps, ...) while parsing, so a sensor with many attributes does
+    // not waste memory. ArduinoJson 7 grows JsonDocument on its own, there
+    // is no capacity to size by hand.
+    JsonDocument filter;
     filter["state"] = true;
 
-    DynamicJsonDocument doc(128);
+    JsonDocument doc;
     const DeserializationError error =
         deserializeJson(doc, *payload, DeserializationOption::Filter(filter));
     if (error) {
@@ -134,7 +135,7 @@ std::optional<String> ha_get_state_from(const String &sensor)
     }
 
     // A missing "state" must not be turned into the text "null".
-    const char *state = doc["state"];
+    const char *state = doc["state"].as<const char *>();
     if (!state) {
         Serial.println(F("No state in HA response."));
         return std::nullopt;
