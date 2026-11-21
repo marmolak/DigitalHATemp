@@ -141,7 +141,7 @@ void display_hour(MD_Parola &matrix)
 {
     const auto hour_ret = ha_get_state_from(HA_HOUR_SENSOR);
     if (!hour_ret) {
-        Serial1.println("HA issue: get hour.");
+        Serial.println("HA issue: get hour.");
         return;
     }
 
