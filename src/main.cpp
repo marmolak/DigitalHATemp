@@ -124,9 +124,10 @@ void setup_OTA()
         else if (error == OTA_END_ERROR) Serial.println("End Failed");
     });
 
-    ArduinoOTA.begin();
+    
     ArduinoOTA.setHostname((const char *) Config::Wifi::mdns_hostname);
     ArduinoOTA.setPassword((const char *) Config::Wifi::ota_password);
+    ArduinoOTA.begin();
 }
 
 
