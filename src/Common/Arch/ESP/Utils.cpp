@@ -1,6 +1,7 @@
 #include "Common/Arch/ESP/Utils.hpp"
 #include <Esp.h>
 #include "esp_wifi.h"
+#include "esp_sleep.h"
 
 namespace CoolESP { namespace Utils {
 
@@ -19,7 +20,9 @@ namespace CoolESP { namespace Utils {
 
     esp_wifi_stop();
 
-    ESP.deepSleep(time_us);
+    // esp_deep_sleep() is declared noreturn, ESP.deepSleep() (which only
+    // calls it) is not, and the compiler would warn that this function returns.
+    esp_deep_sleep(time_us);
 }
 
 }} // end of namespaces
