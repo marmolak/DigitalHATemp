@@ -54,6 +54,9 @@ const std::array<const String, 2> sensors = {
 
 constexpr uint16_t ha_http_timeout_ms = 5000;
 
+// Sleep time after an unrecoverable error (5 minutes).
+constexpr uint64_t error_sleep_us = 5ULL * 60ULL * 1000ULL * 1000ULL;
+
 // All HA requests of one wake-up share a single TLS connection. Opening a
 // new one for every request means a full TLS handshake each time, which
 // keeps the ESP awake (and draining the battery) for no good reason.
@@ -320,8 +323,11 @@ void setup()
     SPI1.begin();
 
     if (!matrix.begin()) {
+        // Do not fall through to loop(): it aborts, the reboot is not
+        // a deep sleep wake-up and the device would spin in a cold boot
+        // loop (Hello!, 20 s OTA, ...) at full power.
         Serial.println("Matrix failed");
-        return;
+        CoolESP::Utils::sleep_me(error_sleep_us);
     }
 
     matrix.setInvert(false);
@@ -396,7 +402,8 @@ void setup()
 }
 
 void loop() {
-    // We should never reach this code so make it die.
-    assert(false);
-    abort();
+    // We should never reach this code. If we do, go to deep sleep instead
+    // of aborting, an abort would start a cold boot loop at full power.
+    Serial.println(F("Reached loop(), this should not happen."));
+    CoolESP::Utils::sleep_me(error_sleep_us);
 }
