@@ -1,0 +1,47 @@
+# Home Assistant package for the tictoctemp display.
+#
+# Copy to <HA config>/packages/tictoctemp.yaml, details in docs/home-assistant.md
+#
+# Entities created here (put their IDs into the firmware config):
+#   input_boolean.tictoctemp_night_mode  -> HA_NIGHT_MODE
+#   sensor.tictoctemp_hour               -> HA_HOUR_SENSOR (optional)
+#
+# The two temperature sensors (HA_SENSOR1, HA_SENSOR2) are your own existing
+# entities, nothing is created for them here.
+#
+# Needs Home Assistant 2024.10 or newer (automation syntax).
+
+input_boolean:
+  tictoctemp_night_mode:
+    name: Tictoctemp night mode
+    icon: mdi:weather-night
+
+template:
+  - sensor:
+      - name: Tictoctemp hour
+        unique_id: tictoctemp_hour
+        icon: mdi:clock-outline
+        # Hour 0-23 in the time zone configured in Home Assistant.
+        # A template using now() is re-evaluated once per minute.
+        state: "{{ now().hour }}"
+
+automation:
+  - id: tictoctemp_night_mode_on
+    alias: Tictoctemp night mode on
+    triggers:
+      - trigger: time
+        at: "23:00:00"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.tictoctemp_night_mode
+
+  - id: tictoctemp_night_mode_off
+    alias: Tictoctemp night mode off
+    triggers:
+      - trigger: time
+        at: "06:30:00"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.tictoctemp_night_mode
