@@ -173,7 +173,12 @@ void setup_OTA()
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
     {
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+        // total / 100 would be 0 for total < 100. Multiply in 64 bits,
+        // progress * 100 could overflow 32 bits for a large image.
+        const unsigned int percent = (total > 0)
+            ? static_cast<unsigned int>(static_cast<uint64_t>(progress) * 100U / total)
+            : 0;
+        Serial.printf("Progress: %u%%\r", percent);
     });
 
     ArduinoOTA.onError([](ota_error_t error)
@@ -355,6 +360,9 @@ void setup()
         delay_20s.start(20000, AsyncDelay::MILLIS);
         do {
             ArduinoOTA.handle();
+            // Do not spin at full power for 20 s. An upload itself runs
+            // inside handle(), so the delay does not slow it down.
+            delay(10);
         } while(!delay_20s.isExpired());
 
         ArduinoOTA.end();
