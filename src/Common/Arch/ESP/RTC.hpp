@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <type_traits>
 
-#include <ESP.h>
+#include <Esp.h>
 
 namespace CoolESP {
 
