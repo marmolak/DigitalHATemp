@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <HardwareSerial.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include "MD_Parola.h"
