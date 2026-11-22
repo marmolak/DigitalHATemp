@@ -84,8 +84,12 @@ std::optional<String> ha_get_sensor(const String &sensor)
     // The server may have closed the kept-alive connection in the meantime.
     // Such a request fails at the transport level (negative return code),
     // so retry it once on a fresh connection.
+    const String url = ha_connect.url + sensor;
     for (int attempt = 0; attempt < 2; ++attempt) {
-        http.begin(session.client, ha_connect.url + sensor);
+        if (!http.begin(session.client, url)) {
+            Serial.println(F("HTTP begin() failed."));
+            return std::nullopt;
+        }
         http.addHeader(F("Authorization"), ha_connect.token);
         http.addHeader(F("content-type"), F("application/json"));
 
