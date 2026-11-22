@@ -54,8 +54,16 @@ const std::array<const String, 2> sensors = {
 
 constexpr uint16_t ha_http_timeout_ms = 5000;
 
-// Sleep time after an unrecoverable error (5 minutes).
-constexpr uint64_t error_sleep_us = 5ULL * 60ULL * 1000ULL * 1000ULL;
+// Deep sleep times, sleep_me() takes microseconds.
+constexpr uint64_t minutes_to_us(const uint64_t minutes)
+{
+    return minutes * 60ULL * 1000ULL * 1000ULL;
+}
+
+constexpr uint64_t refresh_sleep_us = minutes_to_us(5);
+constexpr uint64_t night_sleep_us   = minutes_to_us(10);
+// Sleep time after an unrecoverable error.
+constexpr uint64_t error_sleep_us   = minutes_to_us(5);
 
 // All HA requests of one wake-up share a single TLS connection. Opening a
 // new one for every request means a full TLS handshake each time, which
@@ -324,7 +332,8 @@ void setup()
     pinMode(CS_PIN, OUTPUT);
     digitalWrite(CS_PIN, HIGH);
 
-    SPI1.setClockDivider(SPI_CLOCK_DIV128);
+    // No clock divider here: MD_MAX72XX sets its own SPISettings
+    // (8 MHz) in beginTransaction() on every transfer.
     SPI1.begin();
 
     if (!matrix.begin()) {
@@ -370,9 +379,8 @@ void setup()
 
     const auto night_mode = ha_get_state_from(HA_NIGHT_MODE);
     if (night_mode && *night_mode == "on") {
-        // Sleep for 10 minutes
         matrix.displayShutdown(true);
-        CoolESP::Utils::sleep_me(600000000UL);
+        CoolESP::Utils::sleep_me(night_sleep_us);
 
         // No return from previous call but ...
         return;
@@ -405,8 +413,7 @@ void setup()
     matrix_hw->control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
     matrix_hw->update();
 
-    // sleep for 5 minutes
-    CoolESP::Utils::sleep_me(300000000UL);
+    CoolESP::Utils::sleep_me(refresh_sleep_us);
 }
 
 void loop() {
